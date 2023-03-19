@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="//vjs.zencdn.net/7.15.4/video-js.min.css" rel="stylesheet">
+    <script src="//imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/videojs-ima/1.11.0/videojs.ima.css" rel="stylesheet">
+    <script src="//vjs.zencdn.net/7.15.4/video.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-contrib-ads/6.6.5/videojs.ads.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-ima/1.11.0/videojs.ima.min.js"></script>
+</head>
+
+<body>
+    <video id="my-player" class="video-js vjs-default-skin" controls preload="auto" width="640" height="360"
+        data-setup='{}'>
+        <source src="https://vz-53dc963f-b9f.b-cdn.net/49937e3c-e89d-4dae-a78f-3975aed682cc/playlist.m3u8"
+            type="application/x-mpegURL" />
+        <p class="vjs-no-js">
+            To view this video, please enable JavaScript and consider upgrading to a web browser that
+            <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+        </p>
+    </video>
+
+</body>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('DOMContentLoaded event fired');
+        var VastTag = 'https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/ad_rule_samples&ciu_szs=300x250&ad_rule=1&impl=s&gdfp_req=1&env=vp&output=vmap&unviewed_position_start=1&cust_params=sample_ar%3Dpremidpostpod%26deployment%3Dgmf-js&cmsid=496&vid=short_onecue&correlator=';
+
+        var player = videojs('my-player');
+        console.log('Video.js player initialized');
+
+        var options = {
+            id: 'my-player',
+            adTagUrl: VastTag
+        };
+
+        player.ima(options);
+        console.log('IMA plugin options set');
+
+        player.on('loadedmetadata', function () {
+            console.log('Video metadata loaded');
+
+            // Set up mid-roll ads
+            var midrollAds = [];
+            var midrollAdInterval = 1 * 60; // 5 minutes in seconds
+
+            for (var i = midrollAdInterval; i < player.duration(); i += midrollAdInterval) {
+                midrollAds.push({
+                    time: i,
+                    adTagUrl: VastTag
+                });
+            }
+            console.log('Mid-roll ads set up');
+
+            player.on('timeupdate', function () {
+                var currentTime = player.currentTime();
+                console.log('Current time:', currentTime);
+
+                midrollAds.forEach(function (ad, index) {
+                    if (currentTime >= ad.time && !ad.played) {
+                        console.log('Mid-roll ad scheduled at', ad.time);
+                        ad.played = true;
+                        player.ima.changeAdTag(ad.adTagUrl);
+                        player.ima.requestAds();
+                        console.log('Mid-roll ad requested');
+                    }
+                });
+            });
+        });
+
+        player.ima.initializeAdDisplayContainer();
+        console.log('IMA AdDisplayContainer initialized');
+        player.ima.requestAds();
+        console.log('Pre-roll ad requested');
+        player.play();
+        console.log('Video playback started');
+    });
+
+</script>
+
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link href="video-js.min.css" rel="stylesheet">
+  <script src="//imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
+  <link href="videojs.ima.css" rel="stylesheet">
+  <script src="video.min.js"></script>
+  <script src="videojs.ads.min.js"></script>
+  <script src="videojs.ima.min.js"></script>
+</head>
+
+<body>
+  <video id="my-video" class="video-js vjs-default-skin" controls preload="auto" width="640" height="360"
+    data-setup='{}'>
+    <source src="https://vz-53dc963f-b9f.b-cdn.net/49937e3c-e89d-4dae-a78f-3975aed682cc/playlist.m3u8"
+      type="application/x-mpegURL" />
+    <p class="vjs-no-js">
+      To view this video, please enable JavaScript and consider upgrading to a web browser that
+      <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+    </p>
+  </video>
+
+</body>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    console.log('DOM Content Loaded');
+
+    var player = videojs('my-video');
+    console.log('Video.js player initialized');
+
+    var vastTagPreroll = 'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_preroll_skippable&sz=640x480&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&impl=s&correlator=';
+    var vastTagMidroll = 'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_ad_samples&sz=640x480&cust_params=sample_ct%3Dlinear&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&impl=s&correlator=';
+    var vastTagPostroll = 'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_preroll_skippable&sz=640x480&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&impl=s&correlator=';
+
+    player.ima({
+      adTagUrl: vastTagPreroll,
+      showControlsForAds: true,
+      debug: false
+    });
+
+    console.log('IMA settings configured');
+
+    player.ima.initializeAdDisplayContainer();
+    console.log('IMA ad display container initialized');
+
+    var midrollTriggered = false;
+    var postrollTriggered = false;
+    var midrollInterval = 1 * 30; // 5 minutes
+    var contentStartTime = 0;
+
+    player.on('ads-ad-ended', function () {
+      console.log('Ad ended');
+      contentStartTime = player.currentTime();
+    });
+
+    player.on('loadedmetadata', function () {
+            console.log('Video metadata loaded');
+
+            // Set up mid-roll ads
+            var midrollAds = [];
+            var midrollAdInterval = 1 * 30; // 5 minutes in seconds
+
+            for (var i = midrollAdInterval; i < player.duration(); i += midrollAdInterval) {
+                midrollAds.push({
+                    time: i,
+                    adTagUrl: vastTagMidroll
+                });
+            }
+            console.log('Mid-roll ads set up');
+
+            player.on('timeupdate', function () {
+                var currentTime = player.currentTime();
+                console.log('Current time:', currentTime);
+
+                midrollAds.forEach(function (ad, index) {
+                    if (!midrollTriggered && currentTime >= ad.time && !ad.played) {
+                        console.log('Mid-roll ad scheduled at', ad.time);
+                        ad.played = true;
+                        player.ima.changeAdTag(ad.adTagUrl);
+                        player.ima.requestAds();
+                        console.log('Mid-roll ad requested');
+                    }
+                });
+            });
+        });
+
+    // player.on('timeupdate', function () {
+    //   console.log('Time update:', player.currentTime());
+
+    //   if (!midrollTriggered && (player.currentTime() - contentStartTime) >= midrollInterval) {
+    //     midrollTriggered = true;
+    //     console.log('Midroll triggered');
+
+    //     player.ima.requestAds({
+    //       adTagUrl: vastTagMidroll
+    //     });
+
+    //     console.log('Midroll ads requested');
+    //     midrollTriggered = false;
+    //   }
+    // });
+
+    player.on('ended', function () {
+      console.log('Video ended');
+      if (!postrollTriggered) {
+        postrollTriggered = true;
+        console.log('Postroll triggered');
+
+        player.ima.requestAds({
+          adTagUrl: vastTagPostroll
+        });
+
+        console.log('Postroll ads requested');
+      }
+    });
+
+    player.one('adsready', function () {
+      console.log('Ads ready');
+      // player.play();
+    });
+
+    // player.on('adserror', function (event) {
+    //   console.error('Ad error:', event);
+    // });
+  });
+</script>
+
+</html>
